@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:amq="http://activemq.apache.org/schema/core"
+    xmlns:jms="http://www.springframework.org/schema/jms" xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans 
+    http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+    http://activemq.apache.org/schema/core
+    http://activemq.apache.org/schema/core/activemq-core-5.2.0.xsd
+    http://www.springframework.org/schema/context
+    http://www.springframework.org/schema/context/spring-context-2.5.xsd
+    http://www.springframework.org/schema/jms
+    http://www.springframework.org/schema/jms/spring-jms-2.5.xsd">
+
+    <context:annotation-config />
+    <context:component-scan base-package="com.codefactory.jms.sample" />
+    <context:property-placeholder location="classpath:/spring/jms.properties" />
+    
+<!--     start activemq configuration -->
+    <amq:broker brokerName="activemqBroker" useJmx="true" persistent="false">
+        <amq:transportConnectors>
+            <amq:transportConnector uri="tcp://localhost:0"/>
+        </amq:transportConnectors>
+    </amq:broker>  
+    
+    <amq:queue id="Queue.name" physicalName="org.apache.activemq.spring.Test.spring.embedded"/> 
+    
+    <amq:connectionFactory id="amqConnectionFactory" brokerURL="${jms.url}" userName="${jms.username}"
+        password="${jms.password}" />
+    <!-- end activemq configuration -->
+
+    <!-- listener container definition using the jms namespace, concurrency is the max number of concurrent listeners that 
+        can be started -->
+    <jms:listener-container concurrency="10">
+        <jms:listener id="QueueListener" destination="${jms.defaultDestinationName}" ref="queueListener" />
+    </jms:listener-container>
+
+    <!-- start bean definitions -->
+    <bean id="jmsExceptionListener" class="com.codefactory.jms.sample.JmsExceptionListener" />
+    <bean id="queueListener" class="com.codefactory.jms.sample.QueueListener" />
+    <bean id="queueSender" class="com.codefactory.jms.sample.QueueSender"/>
+    <bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+        <constructor-arg ref="connectionFactory" />
+        <property name="defaultDestinationName" value="${jms.defaultDestinationName}"/>
+    </bean>
+    <bean id="connectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory">
+        <constructor-arg ref="amqConnectionFactory" />
+        <property name="exceptionListener" ref="jmsExceptionListener" />
+        <property name="sessionCacheSize" value="100" />
+    </bean>
+    <!-- end bean definitions -->
+
+</beans>
